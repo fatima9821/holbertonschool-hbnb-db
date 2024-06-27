@@ -4,16 +4,19 @@ from datetime import datetime
 from typing import Any, Optional
 import uuid
 from abc import ABC, abstractmethod
+from . import db
 
 
-class Base(ABC):
+class Base(db.Model, ABC):
     """
     Base Interface for all models
     """
 
-    id: str
-    created_at: datetime
-    updated_at: datetime
+    __abstract__ = True
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
 
     def __init__(
         self,
@@ -46,9 +49,8 @@ class Base(ABC):
         If a class needs a different implementation,
         it should override this method
         """
-        from src.persistence import repo
 
-        return repo.get(cls.__name__.lower(), id)
+        return cls.query.get(id)
 
     @classmethod
     def get_all(cls) -> list["Any"]:
@@ -58,9 +60,8 @@ class Base(ABC):
         If a class needs a different implementation,
         it should override this method
         """
-        from src.persistence import repo
 
-        return repo.get_all(cls.__name__.lower())
+        return cls.query.all()
 
     @classmethod
     def delete(cls, id) -> bool:
@@ -71,14 +72,20 @@ class Base(ABC):
         If a class needs a different implementation,
         it should override this method
         """
-        from src.persistence import repo
-
         obj = cls.get(id)
-
         if not obj:
             return False
 
-        return repo.delete(obj)
+        db.session.delete(obj)
+        db.session.commit()
+        return True
+
+    @classmethod
+    def count(cls) -> int:
+        """
+        This is a common method to count all objects of a class
+        """
+        return cls.query.count()
 
     @abstractmethod
     def to_dict(self) -> dict:
