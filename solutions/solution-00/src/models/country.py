@@ -2,61 +2,83 @@
 Country related functionality
 """
 
+from . import db
+from src.models.base import Base
 
-class Country:
-    """
-    Country representation
+class Country(Base, db.Model):
+    """Country representation"""
 
-    This class does NOT inherit from Base, you can't delete or update a country
+    __tablename__ = 'countries'
 
-    This class is used to get and list countries
-    """
-
-    name: str
-    code: str
-    cities: list
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), nullable=False)
+    code = db.Column(db.String(10), unique=True, nullable=False)
+    cities = db.relationship('City', backref='country', lazy=True)
 
     def __init__(self, name: str, code: str, **kw) -> None:
-        """Dummy init"""
+        """Initialize a Country object"""
         super().__init__(**kw)
         self.name = name
         self.code = code
 
     def __repr__(self) -> str:
-        """Dummy repr"""
+        """String representation of the Country object"""
         return f"<Country {self.code} ({self.name})>"
 
     def to_dict(self) -> dict:
-        """Returns the dictionary representation of the country"""
+        """Dictionary representation of the object"""
         return {
+            "id": self.id,
             "name": self.name,
             "code": self.code,
         }
 
     @staticmethod
-    def get_all() -> list["Country"]:
-        """Get all countries"""
-        from src.persistence import repo
-
-        countries: list["Country"] = repo.get_all("country")
-
-        return countries
-
-    @staticmethod
-    def get(code: str) -> "Country | None":
-        """Get a country by its code"""
-        for country in Country.get_all():
-            if country.code == code:
-                return country
-        return None
-
-    @staticmethod
-    def create(name: str, code: str) -> "Country":
+    def create(country_data: dict) -> "Country":
         """Create a new country"""
-        from src.persistence import repo
+        existing_country = Country.query.filter_by(code=country_data["code"]).first()
+        if existing_country:
+            raise ValueError("Country already exists")
 
-        country = Country(name, code)
+        new_country = Country(**country_data)
+        db.session.add(new_country)
+        db.session.commit()
+        return new_country
 
-        repo.save(country)
+    @staticmethod
+    def get(country_id: int) -> "Country | None":
+        """Retrieve a country by ID"""
+        return Country.query.get(country_id)
+
+    @staticmethod
+    def get_all() -> list["Country"]:
+        """Retrieve all countries"""
+        return Country.query.all()
+
+    @staticmethod
+    def update(country_id: int, data: dict) -> "Country | None":
+        """Update an existing country"""
+        country = Country.query.get(country_id)
+
+        if not country:
+            return None
+
+        if "name" in data:
+            country.name = data["name"]
+        if "code" in data:
+            country.code = data["code"]
+
+        db.session.commit()
 
         return country
+
+    @staticmethod
+    def delete(country_id: int) -> bool:
+        """Delete a country by ID"""
+        country = Country.query.get(country_id)
+        if not country:
+            return False
+
+        db.session.delete(country)
+        db.session.commit()
+        return True
