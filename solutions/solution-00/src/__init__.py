@@ -2,6 +2,10 @@
 
 from flask import Flask
 from flask_cors import CORS
+from dotenv import load_dotenv
+import os
+from .models import db
+from .data_manager import DataManager
 
 cors = CORS()
 
@@ -16,9 +20,14 @@ def create_app(config_class="src.config.DevelopmentConfig") -> Flask:
 
     app.config.from_object(config_class)
 
+     load_dotenv()
+     app.config['USE_DATABASE'] = os.getenv('USE_DATABASE', 'false').lower() == 'true'
+
     register_extensions(app)
     register_routes(app)
     register_handlers(app)
+
+    app.data_manager = DataManager(appa)
 
     return app
 
@@ -26,7 +35,11 @@ def create_app(config_class="src.config.DevelopmentConfig") -> Flask:
 def register_extensions(app: Flask) -> None:
     """Register the extensions for the Flask app"""
     cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
+    db.init_app(app)
     # Further extensions can be added here
+
+    with app.app_context():
+        db.create_all()
 
 
 def register_routes(app: Flask) -> None:
