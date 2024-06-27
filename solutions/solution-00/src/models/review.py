@@ -2,6 +2,7 @@
 Review related functionality
 """
 
+from datetime import datetime
 from . import db
 from src.models.base import Base
 from src.models.place import Place
