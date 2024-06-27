@@ -2,13 +2,20 @@
 Amenity related functionality
 """
 
+from . import db
 from src.models.base import Base
+from datetime import datetime
 
 
 class Amenity(Base):
     """Amenity representation"""
 
-    name: str
+    __tablename__ = 'amenities'
+
+    id = db.Column(db.String(36), primary_key=True)
+    name = db.Column(db.String(128), nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
 
     def __init__(self, name: str, **kw) -> None:
         """Dummy init"""
@@ -32,12 +39,13 @@ class Amenity(Base):
     @staticmethod
     def create(data: dict) -> "Amenity":
         """Create a new amenity"""
-        from src.persistence import repo
+        existing_amenity = Amenity.query.filter_by(name=data["name"]).first()
+        if existing_amenity:
+            raise ValueError("Amenity already exists")
 
         amenity = Amenity(**data)
-
-        repo.save(amenity)
-
+        db.session.add(amenity)
+        db.session.commit()
         return amenity
 
     @staticmethod
@@ -57,22 +65,28 @@ class Amenity(Base):
 
         return amenity
 
-
-class PlaceAmenity(Base):
+    class PlaceAmenity(db.Model):
     """PlaceAmenity representation"""
 
-    place_id: str
-    amenity_id: str
+    __tablename__ = 'place_amenities'
+
+    id = db.Column(db.String(36), primary_key=True)
+    place_id = db.Column(db.String(36), db.ForeignKey('places.id'), nullable=False)
+    amenity_id = db.Column(db.String(36), db.ForeignKey('amenities.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+
+    place = db.relationship("Place", back_populates="amenities")
+    amenity = db.relationship("Amenity", back_populates="places")
 
     def __init__(self, place_id: str, amenity_id: str, **kw) -> None:
-        """Dummy init"""
+        """Init method"""
         super().__init__(**kw)
-
         self.place_id = place_id
         self.amenity_id = amenity_id
 
     def __repr__(self) -> str:
-        """Dummy repr"""
+        """Representation method"""
         return f"<PlaceAmenity ({self.place_id} - {self.amenity_id})>"
 
     def to_dict(self) -> dict:
@@ -88,47 +102,28 @@ class PlaceAmenity(Base):
     @staticmethod
     def get(place_id: str, amenity_id: str) -> "PlaceAmenity | None":
         """Get a PlaceAmenity object by place_id and amenity_id"""
-        from src.persistence import repo
-
-        place_amenities: list[PlaceAmenity] = repo.get_all("placeamenity")
-
-        for place_amenity in place_amenities:
-            if (
-                place_amenity.place_id == place_id
-                and place_amenity.amenity_id == amenity_id
-            ):
-                return place_amenity
-
-        return None
+        return PlaceAmenity.query.filter_by(place_id=place_id, amenity_id=amenity_id).first()
 
     @staticmethod
     def create(data: dict) -> "PlaceAmenity":
         """Create a new PlaceAmenity object"""
-        from src.persistence import repo
-
         new_place_amenity = PlaceAmenity(**data)
-
-        repo.save(new_place_amenity)
-
+        db.session.add(new_place_amenity)
+        db.session.commit()
         return new_place_amenity
 
     @staticmethod
     def delete(place_id: str, amenity_id: str) -> bool:
         """Delete a PlaceAmenity object by place_id and amenity_id"""
-        from src.persistence import repo
-
         place_amenity = PlaceAmenity.get(place_id, amenity_id)
-
         if not place_amenity:
             return False
 
-        repo.delete(place_amenity)
-
+        db.session.delete(place_amenity)
+        db.session.commit()
         return True
 
     @staticmethod
     def update(entity_id: str, data: dict):
         """Not implemented, isn't needed"""
-        raise NotImplementedError(
-            "This method is defined only because of the Base class"
-        )
+        raise NotImplementedError("This method is defined only because of the Base class")
