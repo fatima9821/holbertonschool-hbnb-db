@@ -3,16 +3,20 @@ Place related functionality
 """
 from datetime import datetime
 import uuid
+from typing import Optional, List
 from . import db
-from src.models.base import Base
-from src.models.city import City
-from src.models.user import User
+from .base import SQLAlchemyBase
+from .city import City
+from .user import User
+from .place_amenity import PlaceAmenity  # Assurez-vous que PlaceAmenity est importé correctement
 
-
-class Place(Base):
+class Place(SQLAlchemyBase):
     """Place representation"""
 
-        name = db.Column(db.String(128), nullable=False)
+    __tablename__ = 'places'
+
+    id = db.Column(db.String(36), primary_key=True)
+    name = db.Column(db.String(128), nullable=False)
     description = db.Column(db.Text, nullable=True)
     address = db.Column(db.String(255), nullable=False)
     latitude = db.Column(db.Float, nullable=False)
@@ -23,13 +27,13 @@ class Place(Base):
     number_of_rooms = db.Column(db.Integer, nullable=False)
     number_of_bathrooms = db.Column(db.Integer, nullable=False)
     max_guests = db.Column(db.Integer, nullable=False)
-    
+
     host = db.relationship("User", back_populates="places")
     city = db.relationship("City", back_populates="places")
     amenities = db.relationship("PlaceAmenity", back_populates="place", cascade="all, delete-orphan")
+    reviews = db.relationship('Review', back_populates='place')
 
     def __init__(self, **kwargs):
-        """Initialize a Place object"""
         super().__init__(**kwargs)
         self.name = kwargs.get("name", "")
         self.description = kwargs.get("description", "")
@@ -44,7 +48,7 @@ class Place(Base):
         self.max_guests = int(kwargs.get("max_guests", 0))
 
     def __repr__(self) -> str:
-        """Dummy repr"""
+        """String representation of the Place object"""
         return f"<Place {self.id} ({self.name})>"
 
     def to_dict(self) -> dict:
@@ -83,7 +87,7 @@ class Place(Base):
         return place
 
     @staticmethod
-    def update(place_id: str, data: dict) -> "Place | None":
+    def update(place_id: str, data: dict) -> Optional["Place"]:
         """Update an existing place"""
         place = Place.query.get(place_id)
         if not place:
@@ -93,5 +97,15 @@ class Place(Base):
             setattr(place, key, value)
 
         db.session.commit()
-
         return place
+
+    @staticmethod
+    def delete(place_id: str) -> bool:
+        """Delete an existing place"""
+        place = Place.query.get(place_id)
+        if not place:
+            return False
+
+        db.session.delete(place)
+        db.session.commit()
+        return True

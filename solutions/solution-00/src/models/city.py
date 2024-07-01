@@ -2,25 +2,28 @@
 City related functionality
 """
 
-from src.models.base import Base
-from src.models.country import Country
+from typing import Optional, List
+from .base import SQLAlchemyBase
+from . import db
+from .country import Country
 
-
-class City(Base):
+class City(SQLAlchemyBase):
     """City representation"""
 
-    name: str
-    country_code: str
+    __tablename__ = 'cities'
+
+    name = db.Column(db.String(128), nullable=False)
+    country_code = db.Column(db.String(10), db.ForeignKey('countries.code'), nullable=False)
+    country = db.relationship("Country", backref="cities")
 
     def __init__(self, name: str, country_code: str, **kw) -> None:
-        """Dummy init"""
+        """Initialize a City object"""
         super().__init__(**kw)
-
         self.name = name
         self.country_code = country_code
 
     def __repr__(self) -> str:
-        """Dummy repr"""
+        """String representation of the City object"""
         return f"<City {self.id} ({self.name})>"
 
     def to_dict(self) -> dict:
@@ -36,32 +39,45 @@ class City(Base):
     @staticmethod
     def create(data: dict) -> "City":
         """Create a new city"""
-        from src.persistence import repo
-
-        country = Country.get(data["country_code"])
-
+        country = Country.query.filter_by(code=data["country_code"]).first()
         if not country:
             raise ValueError("Country not found")
 
         city = City(**data)
-
-        repo.save(city)
-
+        db.session.add(city)
+        db.session.commit()
         return city
 
     @staticmethod
-    def update(city_id: str, data: dict) -> "City":
+    def get(city_id: str) -> Optional["City"]:
+        """Retrieve a city by ID"""
+        return City.query.get(city_id)
+
+    @staticmethod
+    def get_all() -> List["City"]:
+        """Retrieve all cities"""
+        return City.query.all()
+
+    @staticmethod
+    def update(city_id: str, data: dict) -> Optional["City"]:
         """Update an existing city"""
-        from src.persistence import repo
-
-        city = City.get(city_id)
-
+        city = City.query.get(city_id)
         if not city:
-            raise ValueError("City not found")
+            return None
 
         for key, value in data.items():
             setattr(city, key, value)
 
-        repo.update(city)
-
+        db.session.commit()
         return city
+
+    @staticmethod
+    def delete(city_id: str) -> bool:
+        """Delete an existing city"""
+        city = City.query.get(city_id)
+        if not city:
+            return False
+
+        db.session.delete(city)
+        db.session.commit()
+        return True

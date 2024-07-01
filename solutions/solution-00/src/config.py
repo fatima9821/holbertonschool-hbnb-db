@@ -4,17 +4,14 @@ This module exports configuration classes for the Flask application.
 - DevelopmentConfig
 - TestingConfig
 - ProductionConfig
-
 """
 
-from abc import ABC
 import os
 
-
-class Config(ABC):
+class Config:
     """
-    Initial configuration settings
-    This class should not be instantiated directly
+    Initial configuration settings.
+    This class should not be instantiated directly.
     """
 
     DEBUG = False
@@ -25,39 +22,19 @@ class Config(ABC):
 
 class DevelopmentConfig(Config):
     """
-    Development configuration settings
-    This configuration is used when running the application locally
-
-    This is useful for development and debugging purposes.
-
-    To check if the application is running in development mode, you can use:
-    ```
-    app = Flask(__name__)
-
-    if app.debug:
-        # Do something
-    ```
+    Development configuration settings.
+    This configuration is used when running the application locally.
+    It's useful for development and debugging purposes.
     """
 
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL", "sqlite:///hbnb_dev.db")
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///hbnb_dev.db")
     DEBUG = True
 
 
 class TestingConfig(Config):
     """
-    Testing configuration settings
+    Testing configuration settings.
     This configuration is used when running tests.
-    You can enabled/disable things across the application
-
-    To check if the application is running in testing mode, you can use:
-    ```
-    app = Flask(__name__)
-
-    if app.testing:
-        # Do something
-    ```
-
     """
 
     TESTING = True
@@ -66,10 +43,8 @@ class TestingConfig(Config):
 
 class ProductionConfig(Config):
     """
-    Production configuration settings
-    This configuration is used when you create a
-    production build of the application
-
+    Production configuration settings.
+    This configuration is used for the production build of the application.
     The debug or testing options are disabled in this configuration.
     """
 
@@ -77,6 +52,5 @@ class ProductionConfig(Config):
     DEBUG = False
 
     SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL",
-        "postgresql://user:password@localhost/hbnb_prod"
+        "DATABASE_URL", "postgresql://user:password@localhost/hbnb_prod"
     )

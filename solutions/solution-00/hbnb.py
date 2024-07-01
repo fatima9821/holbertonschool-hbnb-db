@@ -1,23 +1,21 @@
-""" Another way to run the app"""
+""" Another way to run the app """
 
-from flask import Flask
-from models import db
-from models.user import User
-from models.amenity import Amenity
-from models.place import Place
-from models.city import City
-from models.state import State
-from models.place_amenity import PlaceAmenity
-from models.country import Country
-
+from src import create_app, db
+from src.models.user import User
+from src.models.amenity import Amenity
+from src.models.city import City
+from src.models.state import State
+from src.models.country import Country
+from src.models.place import Place
+from src.models.review import Review
+from src.models.place_amenity import PlaceAmenity
+from src.data_manager import DataManager
 
 app = create_app()
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///development.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
-
-db.init_app(app)
 
 with app.app_context():
     db.create_all()
+    data_manager = DataManager(app)
+
+if __name__ == "__main__":
+    app.run()

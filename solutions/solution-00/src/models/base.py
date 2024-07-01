@@ -1,22 +1,21 @@
 """ Abstract base class for all models """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Optional, List
 import uuid
 from abc import ABC, abstractmethod
+from sqlalchemy.ext.declarative import as_declarative
+from sqlalchemy import Column, DateTime, String
 from . import db
 
-
-class Base(db.Model, ABC):
+class Base(ABC):
     """
     Base Interface for all models
     """
 
-    __abstract__ = True
-
-    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
-    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+    id: str
+    created_at: datetime
+    updated_at: datetime
 
     def __init__(
         self,
@@ -29,7 +28,6 @@ class Base(db.Model, ABC):
         Base class constructor
         If kwargs are provided, set them as attributes
         """
-
         if kwargs:
             for key, value in kwargs.items():
                 if hasattr(self, key):
@@ -41,51 +39,47 @@ class Base(db.Model, ABC):
         self.updated_at = updated_at or datetime.now()
 
     @classmethod
-    def get(cls, id) -> "Any | None":
+    def get(cls, id: str) -> Optional[Any]:
         """
-        This is a common method to get an specific object
+        This is a common method to get a specific object
         of a class by its id
 
         If a class needs a different implementation,
         it should override this method
         """
+        from src.persistence import repo
 
-        return cls.query.get(id)
+        return repo.get(cls.__name__.lower(), id)
 
     @classmethod
-    def get_all(cls) -> list["Any"]:
+    def get_all(cls) -> List[Any]:
         """
         This is a common method to get all objects of a class
 
         If a class needs a different implementation,
         it should override this method
         """
+        from src.persistence import repo
 
-        return cls.query.all()
+        return repo.get_all(cls.__name__.lower())
 
     @classmethod
-    def delete(cls, id) -> bool:
+    def delete(cls, id: str) -> bool:
         """
-        This is a common method to delete an specific
+        This is a common method to delete a specific
         object of a class by its id
 
         If a class needs a different implementation,
         it should override this method
         """
+        from src.persistence import repo
+
         obj = cls.get(id)
+
         if not obj:
             return False
 
-        db.session.delete(obj)
-        db.session.commit()
-        return True
-
-    @classmethod
-    def count(cls) -> int:
-        """
-        This is a common method to count all objects of a class
-        """
-        return cls.query.count()
+        return repo.delete(obj)
 
     @abstractmethod
     def to_dict(self) -> dict:
@@ -98,5 +92,11 @@ class Base(db.Model, ABC):
 
     @staticmethod
     @abstractmethod
-    def update(entity_id: str, data: dict) -> Any | None:
+    def update(entity_id: str, data: dict) -> Optional[Any]:
         """Updates an object of the class"""
+
+@as_declarative()
+class SQLAlchemyBase:
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

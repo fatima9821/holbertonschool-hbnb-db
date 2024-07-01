@@ -2,15 +2,15 @@
 Country related functionality
 """
 
+from typing import Optional, List
+from .base import SQLAlchemyBase
 from . import db
-from src.models.base import Base
 
-class Country(Base, db.Model):
+class Country(SQLAlchemyBase):
     """Country representation"""
 
     __tablename__ = 'countries'
 
-    id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), nullable=False)
     code = db.Column(db.String(10), unique=True, nullable=False)
     cities = db.relationship('City', backref='country', lazy=True)
@@ -31,6 +31,8 @@ class Country(Base, db.Model):
             "id": self.id,
             "name": self.name,
             "code": self.code,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
         }
 
     @staticmethod
@@ -46,20 +48,19 @@ class Country(Base, db.Model):
         return new_country
 
     @staticmethod
-    def get(country_id: int) -> "Country | None":
+    def get(country_id: str) -> Optional["Country"]:
         """Retrieve a country by ID"""
         return Country.query.get(country_id)
 
     @staticmethod
-    def get_all() -> list["Country"]:
+    def get_all() -> List["Country"]:
         """Retrieve all countries"""
         return Country.query.all()
 
     @staticmethod
-    def update(country_id: int, data: dict) -> "Country | None":
+    def update(country_id: str, data: dict) -> Optional["Country"]:
         """Update an existing country"""
         country = Country.query.get(country_id)
-
         if not country:
             return None
 
@@ -69,11 +70,10 @@ class Country(Base, db.Model):
             country.code = data["code"]
 
         db.session.commit()
-
         return country
 
     @staticmethod
-    def delete(country_id: int) -> bool:
+    def delete(country_id: str) -> bool:
         """Delete a country by ID"""
         country = Country.query.get(country_id)
         if not country:

@@ -1,13 +1,8 @@
-"""
-User related functionality
-"""
-
+from typing import Optional, List
+from .base_model import BaseModel
 from . import db
-from src.models.base import Base
-from datetime import datetime
 
-
-class User(Base, db.Model):
+class User(BaseModel):
     """User representation"""
 
     __tablename__ = 'users'
@@ -16,13 +11,13 @@ class User(Base, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
-    password = db.Column(db.String(128), nullable=False)  # Assurez-vous d'un stockage sécurisé
+    password = db.Column(db.String(128), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
-    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, onupdate=db.func.current_timestamp())
 
-    def __init__(self, email: str, first_name: str, last_name: str, **kw):
-        """Dummy init"""
+    def __init__(self, email: str, first_name: str, last_name: str, password: str, is_admin: bool = False, **kw):
+        """Initialize a User object"""
         super().__init__(**kw)
         self.email = email
         self.first_name = first_name
@@ -31,7 +26,7 @@ class User(Base, db.Model):
         self.is_admin = is_admin
 
     def __repr__(self) -> str:
-        """Dummy repr"""
+        """String representation of the User object"""
         return f"<User {self.id} ({self.email})>"
 
     def to_dict(self) -> dict:
@@ -60,17 +55,17 @@ class User(Base, db.Model):
         return new_user
 
     @staticmethod
-    def get(user_id: str) -> "User | None":
+    def get(user_id: str) -> Optional["User"]:
         """Retrieve a user by ID"""
         return User.query.get(user_id)
 
     @staticmethod
-    def get_all() -> list["User"]:
+    def get_all() -> List["User"]:
         """Retrieve all users"""
         return User.query.all()
 
     @staticmethod
-    def update(user_id: str, data: dict) -> "User | None":
+    def update(user_id: str, data: dict) -> Optional["User"]:
         """Update an existing user"""
         user = User.query.get(user_id)
 

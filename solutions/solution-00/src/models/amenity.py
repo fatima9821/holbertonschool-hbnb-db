@@ -2,29 +2,24 @@
 Amenity related functionality
 """
 
+from typing import Optional, List
 from . import db
-from src.models.base import Base
-from datetime import datetime
+from .base import SQLAlchemyBase
 
-
-class Amenity(Base):
+class Amenity(SQLAlchemyBase):
     """Amenity representation"""
 
     __tablename__ = 'amenities'
 
-    id = db.Column(db.String(36), primary_key=True)
     name = db.Column(db.String(128), nullable=False)
-    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
-    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
 
     def __init__(self, name: str, **kw) -> None:
-        """Dummy init"""
+        """Initialize an Amenity object"""
         super().__init__(**kw)
-
         self.name = name
 
     def __repr__(self) -> str:
-        """Dummy repr"""
+        """String representation of the Amenity object"""
         return f"<Amenity {self.id} ({self.name})>"
 
     def to_dict(self) -> dict:
@@ -49,44 +44,48 @@ class Amenity(Base):
         return amenity
 
     @staticmethod
-    def update(amenity_id: str, data: dict) -> "Amenity | None":
+    def update(amenity_id: str, data: dict) -> Optional["Amenity"]:
         """Update an existing amenity"""
-        from src.persistence import repo
-
-        amenity: Amenity | None = Amenity.get(amenity_id)
-
+        amenity = Amenity.query.get(amenity_id)
         if not amenity:
             return None
 
         if "name" in data:
             amenity.name = data["name"]
 
-        repo.update(amenity)
-
+        db.session.commit()
         return amenity
 
-    class PlaceAmenity(db.Model):
+    @staticmethod
+    def delete(amenity_id: str) -> bool:
+        """Delete an existing amenity"""
+        amenity = Amenity.query.get(amenity_id)
+        if not amenity:
+            return False
+
+        db.session.delete(amenity)
+        db.session.commit()
+        return True
+
+class PlaceAmenity(SQLAlchemyBase):
     """PlaceAmenity representation"""
 
     __tablename__ = 'place_amenities'
 
-    id = db.Column(db.String(36), primary_key=True)
     place_id = db.Column(db.String(36), db.ForeignKey('places.id'), nullable=False)
     amenity_id = db.Column(db.String(36), db.ForeignKey('amenities.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
-    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
 
     place = db.relationship("Place", back_populates="amenities")
     amenity = db.relationship("Amenity", back_populates="places")
 
     def __init__(self, place_id: str, amenity_id: str, **kw) -> None:
-        """Init method"""
+        """Initialize a PlaceAmenity object"""
         super().__init__(**kw)
         self.place_id = place_id
         self.amenity_id = amenity_id
 
     def __repr__(self) -> str:
-        """Representation method"""
+        """String representation of the PlaceAmenity object"""
         return f"<PlaceAmenity ({self.place_id} - {self.amenity_id})>"
 
     def to_dict(self) -> dict:
@@ -100,7 +99,7 @@ class Amenity(Base):
         }
 
     @staticmethod
-    def get(place_id: str, amenity_id: str) -> "PlaceAmenity | None":
+    def get(place_id: str, amenity_id: str) -> Optional["PlaceAmenity"]:
         """Get a PlaceAmenity object by place_id and amenity_id"""
         return PlaceAmenity.query.filter_by(place_id=place_id, amenity_id=amenity_id).first()
 

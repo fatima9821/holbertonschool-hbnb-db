@@ -1,1 +1,15 @@
+# Dépendances de développement pour le projet
+
+# Linter
 pycodestyle
+
+# Test framework
+pytest
+coverage
+
+# Gestion de dépendances
+pip-tools
+
+# Documentation
+sphinx
+sphinx-autodoc-typehints

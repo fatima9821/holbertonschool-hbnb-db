@@ -7,12 +7,12 @@ import pycodestyle
 
 
 class TestDocumentation(unittest.TestCase):
-    """Also it's important to document the tests 😁"""
+    """Tests to ensure docstring compliance and PEP8."""
 
     def test_documentation(self):
         """Check if all modules, classes, functions, and methods have docstrings."""
-        root_dir = "./src"  # specify your root directory here
-        for root, dirs, files in os.walk(root_dir):
+        root_dir = os.path.abspath("./src")  # specify your root directory here
+        for root, _, files in os.walk(root_dir):
             for file in files:
                 if file.endswith(".py"):
                     file_path = os.path.join(root, file)
@@ -22,7 +22,7 @@ class TestDocumentation(unittest.TestCase):
                     self.check_docstrings(tree, file_path)
 
     def check_docstrings(self, node, file_path):
-        """Check if all modules, classes, functions, and methods have docstrings."""
+        """Recursively check docstrings in AST nodes."""
         if isinstance(node, ast.Module):
             self.assertIsNotNone(
                 ast.get_docstring(node), f"Module {file_path} is missing a docstring"
@@ -48,7 +48,8 @@ class TestDocumentation(unittest.TestCase):
             self.check_docstrings(child, file_path)
 
     def test_pep8_compliance(self):
-        root_dir = "./src"
+        """Check PEP8 compliance using pycodestyle."""
+        root_dir = os.path.abspath("./src")
         style_guide = pycodestyle.StyleGuide()
         report = style_guide.check_files([root_dir])
         self.assertEqual(

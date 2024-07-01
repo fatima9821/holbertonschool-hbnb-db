@@ -1,16 +1,17 @@
 """ Initialize the Flask app. """
-
+import os
 from flask import Flask
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager
 from dotenv import load_dotenv
-import os
 from .models import db
 from .data_manager import DataManager
+from .config import DevelopmentConfig, ProductionConfig
 
 cors = CORS()
+jwt = JWTManager()
 
-
-def create_app(config_class="src.config.DevelopmentConfig") -> Flask:
+def create_app(config_class=DevelopmentConfig) -> Flask:
     """
     Create a Flask app with the given configuration class.
     The default configuration class is DevelopmentConfig.
@@ -18,29 +19,33 @@ def create_app(config_class="src.config.DevelopmentConfig") -> Flask:
     app = Flask(__name__)
     app.url_map.strict_slashes = False
 
+    # Load environment variables from .env file
+    load_dotenv()
+
+    # Configure the app with the provided config class
     app.config.from_object(config_class)
 
-     load_dotenv()
-     app.config['USE_DATABASE'] = os.getenv('USE_DATABASE', 'false').lower() == 'true'
-
-    register_extensions(app)
-    register_routes(app)
-    register_handlers(app)
-
-    app.data_manager = DataManager(appa)
-
-    return app
-
-
-def register_extensions(app: Flask) -> None:
-    """Register the extensions for the Flask app"""
+    # Initialize CORS
     cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
-    db.init_app(app)
-    # Further extensions can be added here
 
+    # Initialize SQLAlchemy
+    db.init_app(app)
+
+    # Initialize JWT authentication
+    jwt.init_app(app)
+
+    # Create tables based on models
     with app.app_context():
         db.create_all()
 
+    # Initialize DataManager with the app instance
+    app.data_manager = DataManager(app)
+
+    # Register routes and handlers
+    register_routes(app)
+    register_handlers(app)
+
+    return app
 
 def register_routes(app: Flask) -> None:
     """Import and register the routes for the Flask app"""
@@ -61,15 +66,12 @@ def register_routes(app: Flask) -> None:
     app.register_blueprint(reviews_bp)
     app.register_blueprint(amenities_bp)
 
-
 def register_handlers(app: Flask) -> None:
     """Register the error handlers for the Flask app."""
     app.errorhandler(404)(lambda e: (
         {"error": "Not found", "message": str(e)}, 404
-    )
-    )
-    app.errorhandler(400)(
-        lambda e: (
-            {"error": "Bad request", "message": str(e)}, 400
-        )
-    )
+    ))
+
+    app.errorhandler(400)(lambda e: (
+        {"error": "Bad request", "message": str(e)}, 400
+    ))
