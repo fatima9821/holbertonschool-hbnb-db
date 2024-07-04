@@ -1,6 +1,13 @@
 from datetime import datetime
 from sqlalchemy import Column, String, Boolean
-from src import db, bcrypt  # Assurez-vous que 'db' et 'bcrypt' sont correctement importés
+from src import db, bcrypt
+from flask_bcrypt import Bcrypt
+from datetime import datetime
+
+
+db = SQLAlchemy()
+bcrypt = Bcrypt()
+
 
 class User(db.Model):
     """User representation"""
@@ -9,10 +16,10 @@ class User(db.Model):
 
     id = db.Column(db.String(36), primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
 
     def __init__(self, email, password, is_admin=False):
         self.email = email
