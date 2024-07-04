@@ -1,19 +1,13 @@
-from flask_sqlalchemy import SQLAlchemy
-
-db = SQLAlchemy()
+from src import db
 
 class DataManager:
     """Class to manage data operations"""
 
     def __init__(self, app=None):
-        self.app = app
         self.db = db
-        if app is not None:
-            self.init_app(app)
 
     def init_app(self, app):
         """Initialize the Flask app with the database"""
-        self.app = app
         self.db.init_app(app)
 
     def create(self, model, **kwargs):

@@ -10,6 +10,10 @@ from src.models.place import Place
 from src.models.review import Review
 from src.models.place_amenity import PlaceAmenity
 from src.data_manager import DataManager
+from dotenv import load_dotenv
+
+
+load_dotenv()  
 
 app = create_app()
 

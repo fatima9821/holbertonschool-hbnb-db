@@ -1,32 +1,29 @@
 from datetime import datetime
-from flask_sqlalchemy import SQLAlchemy
-from src import db, bcrypt
-from src import db
-
-db = SQLALchemy()
+from sqlalchemy import Column, String, Boolean
+from src import db, bcrypt  # Assurez-vous que 'db' et 'bcrypt' sont correctement importés
 
 class User(db.Model):
     """User representation"""
 
     __tablename__ = 'users'
 
-    id = Column(String(36), primary_key=True)
-    email = Column(String(120), unique=True, nullable=False)
-    password = Column(String(128), nullable=False)
-    is_admin = Column(Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
-    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+    id = db.Column(db.String(36), primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(128), nullable=False)
+    is_admin = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def __init__(self, email, password, is_admin=False):
         self.email = email
-        self.password = password
+        self.set_password(password)
         self.is_admin = is_admin
 
     def set_password(self, password):
-        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+        self.password = bcrypt.generate_password_hash(password).decode('utf-8')
 
     def check_password(self, password):
-        return bcrypt.check_password_hash(self.password_hash, password)
+        return bcrypt.check_password_hash(self.password, password)
 
     def to_dict(self):
         return {
@@ -54,7 +51,9 @@ class User(db.Model):
             return None
 
         user.email = data.get('email', user.email)
-        user.password = data.get('password', user.password)
+        password = data.get('password')
+        if password:
+            user.set_password(password)
         user.is_admin = data.get('is_admin', user.is_admin)
         db.session.commit()
         return user
