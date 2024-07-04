@@ -1,95 +1,66 @@
-from typing import Optional, List
-from .base_model import BaseModel
-from . import db
+from datetime import datetime
+from flask_sqlalchemy import SQLAlchemy
+from src import db, bcrypt
+from src import db
 
-class User(BaseModel):
+db = SQLALchemy()
+
+class User(db.Model):
     """User representation"""
 
     __tablename__ = 'users'
 
-    id = db.Column(db.String(36), primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    first_name = db.Column(db.String(50), nullable=False)
-    last_name = db.Column(db.String(50), nullable=False)
-    password = db.Column(db.String(128), nullable=False)
-    is_admin = db.Column(db.Boolean, default=False)
+    id = Column(String(36), primary_key=True)
+    email = Column(String(120), unique=True, nullable=False)
+    password = Column(String(128), nullable=False)
+    is_admin = Column(Boolean, default=False)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
-    updated_at = db.Column(db.DateTime, onupdate=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
 
-    def __init__(self, email: str, first_name: str, last_name: str, password: str, is_admin: bool = False, **kw):
-        """Initialize a User object"""
-        super().__init__(**kw)
+    def __init__(self, email, password, is_admin=False):
         self.email = email
-        self.first_name = first_name
-        self.last_name = last_name
         self.password = password
         self.is_admin = is_admin
 
-    def __repr__(self) -> str:
-        """String representation of the User object"""
-        return f"<User {self.id} ({self.email})>"
+    def set_password(self, password):
+        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
 
-    def to_dict(self) -> dict:
-        """Dictionary representation of the object"""
+    def check_password(self, password):
+        return bcrypt.check_password_hash(self.password_hash, password)
+
+    def to_dict(self):
         return {
             "id": self.id,
             "email": self.email,
-            "first_name": self.first_name,
-            "last_name": self.last_name,
-            "password": self.password,
             "is_admin": self.is_admin,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }
 
     @staticmethod
-    def create(user_data: dict) -> "User":
-        """Create a new user"""
-        existing_user = User.query.filter_by(email=user_data["email"]).first()
-        if existing_user:
-            raise ValueError("User already exists")
-
-        new_user = User(**user_data)
+    def create(data):
+        new_user = User(
+            email=data.get('email'),
+            password=data.get('password')
+        )
         db.session.add(new_user)
         db.session.commit()
         return new_user
 
     @staticmethod
-    def get(user_id: str) -> Optional["User"]:
-        """Retrieve a user by ID"""
-        return User.query.get(user_id)
-
-    @staticmethod
-    def get_all() -> List["User"]:
-        """Retrieve all users"""
-        return User.query.all()
-
-    @staticmethod
-    def update(user_id: str, data: dict) -> Optional["User"]:
-        """Update an existing user"""
+    def update(user_id, data):
         user = User.query.get(user_id)
-
         if not user:
             return None
 
-        if "email" in data:
-            user.email = data["email"]
-        if "first_name" in data:
-            user.first_name = data["first_name"]
-        if "last_name" in data:
-            user.last_name = data["last_name"]
-        if "password" in data:
-            user.password = data["password"]
-        if "is_admin" in data:
-            user.is_admin = data["is_admin"]
-
+        user.email = data.get('email', user.email)
+        user.password = data.get('password', user.password)
+        user.is_admin = data.get('is_admin', user.is_admin)
         db.session.commit()
-
         return user
 
     @staticmethod
-    def delete(user_id: str) -> bool:
-        """Delete a user by ID"""
+    def delete(user_id):
         user = User.query.get(user_id)
         if not user:
             return False
